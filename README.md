@@ -12,4 +12,3 @@ A bespoke compliance and document renewal tracker designed for small organizatio
 * **Database:** MongoDB 
 * **Backend:** Node.js & Express REST API
 * **Frontend:** React UI
-* **Integrations:** MongoDB MCP Server & Google Stitch for UI generation
