@@ -1,4 +1,4 @@
-import { Route, BrowserRouter as Router, Routes } from 'react-router-dom';
+import { Route, BrowserRouter as Router, Routes, Link } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import Navbar from './components/layout/Navbar';
@@ -8,11 +8,11 @@ import DocumentDetail from './views/DocumentDetail';
 import RenewalHistoryLog from './views/RenewalHistoryLog';
 
 /**
- * App — root component.
+ * App — Root application container with luxury aesthetic shell.
  *
  * Route map:
  *   /                          → Dashboard          (Prioritized Renewal Register)
- *   /documents                 → DocumentRegister   (Full document table)
+ *   /documents                 → DocumentRegister   (Full compliance document table)
  *   /documents/:id             → DocumentDetail     (Single document + edit + renew)
  *   /documents/:id/history     → RenewalHistoryLog  (Audit trail)
  */
@@ -21,16 +21,14 @@ function App() {
     <Router>
       <AppProvider>
         <ErrorBoundary>
-          <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-
-            {/* ── Top navigation ─────────────────────────────────── */}
+          <div className="app-shell">
+            {/* ── Top Navigation ─────────────────────────────────── */}
             <Navbar />
 
-            {/* ── Page content ───────────────────────────────────── */}
-            <main style={{ flex: 1, padding: '1.5rem 2rem', maxWidth: '1200px',
-                           width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
+            {/* ── Page Content ───────────────────────────────────── */}
+            <main className="app-main">
               <Routes>
-                {/* Dashboard — shows the prioritized expiry list */}
+                {/* Dashboard — prioritized expiry list */}
                 <Route
                   path="/"
                   element={
@@ -40,7 +38,7 @@ function App() {
                   }
                 />
 
-                {/* Document Register — full tabular view of all documents */}
+                {/* Document Register — full tabular view */}
                 <Route
                   path="/documents"
                   element={
@@ -50,7 +48,7 @@ function App() {
                   }
                 />
 
-                {/* Document Detail — single document with edit & renewal */}
+                {/* Document Detail — single view with edit and renewal */}
                 <Route
                   path="/documents/:id"
                   element={
@@ -60,7 +58,7 @@ function App() {
                   }
                 />
 
-                {/* Renewal History audit log for a document */}
+                {/* Renewal History audit log */}
                 <Route
                   path="/documents/:id/history"
                   element={
@@ -70,14 +68,18 @@ function App() {
                   }
                 />
 
-                {/* 404 fallback */}
+                {/* 404 Fallback */}
                 <Route
                   path="*"
                   element={
-                    <div style={{ textAlign: 'center', padding: '3rem' }}>
-                      <h2>404 — Page Not Found</h2>
-                      <p style={{ color: '#888' }}>The page you are looking for does not exist.</p>
-                      <a href="/" style={{ color: '#8B1A1A' }}>← Return to Dashboard</a>
+                    <div className="card" style={{ textAlign: 'center', margin: '3rem auto', maxWidth: '500px' }}>
+                      <h2 style={{ marginBottom: '0.75rem' }}>Document Not Located</h2>
+                      <p style={{ color: 'var(--clr-ink-muted)', marginBottom: '1.5rem' }}>
+                        The ledger or page requested does not exist or has been archived.
+                      </p>
+                      <Link to="/" className="btn btn--primary">
+                        Return to Dashboard
+                      </Link>
                     </div>
                   }
                 />
@@ -85,11 +87,9 @@ function App() {
             </main>
 
             {/* ── Footer ─────────────────────────────────────────── */}
-            <footer style={{ borderTop: '1px solid #e0d8cc', padding: '0.75rem 2rem',
-                             textAlign: 'center', fontSize: '0.78rem', color: '#999' }}>
-              BusinessDocument Expiry © {new Date().getFullYear()}
+            <footer className="app-footer">
+              BusinessDocument Expiry &bull; Bespoke Executive Compliance &bull; &copy; {new Date().getFullYear()}
             </footer>
-
           </div>
         </ErrorBoundary>
       </AppProvider>

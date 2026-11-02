@@ -1,30 +1,113 @@
+/* ================================================================
+   GLOBAL RESETS & BASE — BusinessDocument Expiry
+   ================================================================ */
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-body {
-  font-family: 'Georgia', 'Times New Roman', serif;
-  background-color: #faf7f2;
-  color: #2c1a0e;
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
+/* ── Design Tokens ─────────────────────────────────────────────── */
+:root {
+  /* Exact palette */
+  --clr-primary:     #9A3F3F;   /* deep copper/red — primary actions, urgent */
+  --clr-primary-dk:  #7A2E2E;   /* darker hover state */
+  --clr-secondary:   #C1856D;   /* muted rose/copper — accents, borders      */
+  --clr-secondary-lt:#D9A98E;   /* lighter accent tint                       */
+  --clr-parchment:   #E6CFA9;   /* cards, modular containers                 */
+  --clr-parchment-dk:#D4B98A;   /* card border / header row                  */
+  --clr-cream:       #FBF9D1;   /* main page background                      */
+
+  /* Text */
+  --clr-ink:         #2C1810;   /* near-black warm ink                       */
+  --clr-ink-muted:   #6B4C3B;   /* secondary text                            */
+  --clr-ink-faint:   #A07D68;   /* placeholder, metadata                     */
+
+  /* Semantic */
+  --clr-success-bg:  #E8F4E0;
+  --clr-success-bd:  #5A8040;
+  --clr-success-tx:  #2A4A18;
+  --clr-error-bg:    #F7E8E8;
+  --clr-error-bd:    #9A3F3F;
+  --clr-error-tx:    #5C1A1A;
+  --clr-warn-bg:     #FBF0DC;
+  --clr-warn-bd:     #C1856D;
+  --clr-warn-tx:     #6B3A1A;
+
+  /* Days-left */
+  --clr-ok:          #3D6B28;
+  --clr-warn:        #9A5A1A;
+  --clr-urgent:      #9A3F3F;
+
+  /* Typography */
+  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --font-body:    'EB Garamond', Georgia, 'Times New Roman', serif;
+  --font-ui:      'Lato', 'Helvetica Neue', Arial, sans-serif;
+
+  /* Spacing */
+  --sp-xs:  0.25rem;
+  --sp-sm:  0.5rem;
+  --sp-md:  1rem;
+  --sp-lg:  1.5rem;
+  --sp-xl:  2rem;
+  --sp-2xl: 3rem;
+
+  /* Radii */
+  --r-sm: 4px;
+  --r-md: 8px;
+  --r-lg: 14px;
+  --r-pill: 999px;
+
+  /* Shadows */
+  --shadow-card: 0 2px 16px rgba(44, 24, 16, 0.09);
+  --shadow-hover: 0 6px 28px rgba(44, 24, 16, 0.15);
+  --shadow-inset: inset 0 1px 3px rgba(44, 24, 16, 0.12);
 }
 
-h1, h2, h3, h4 {
-  font-weight: 700;
-  line-height: 1.3;
+/* ── Base Typography ───────────────────────────────────────────── */
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
 }
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--clr-cream);
+  color: var(--clr-ink);
+  line-height: 1.7;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5 {
+  font-family: var(--font-display);
+  line-height: 1.25;
+  color: var(--clr-ink);
+  font-weight: 700;
+}
+
+h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); }
+h2 { font-size: clamp(1.3rem, 2.5vw, 1.75rem); }
+h3 { font-size: clamp(1.1rem, 2vw, 1.35rem); }
+
+p { margin-bottom: 0; }
 
 a {
-  color: inherit;
+  color: var(--clr-primary);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+a:hover { color: var(--clr-primary-dk); text-decoration: underline; }
+
+button, input, select, textarea {
+  font-family: var(--font-ui);
 }
 
-button {
-  font-family: inherit;
-}
-
-input, select, textarea {
-  font-family: inherit;
+/* ── Utility Helpers ───────────────────────────────────────────── */
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
 }

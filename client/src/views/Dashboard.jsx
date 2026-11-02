@@ -8,60 +8,63 @@ import DocumentForm from '../components/documents/DocumentForm';
 
 /**
  * Dashboard view — shows the Prioritized Renewal Register.
- *
- * Documents are already sorted closest-expiry-first by the API.
- * An optional status filter tabs strip lets the user narrow the view.
+ * Ranked automatically closest to expiry date first.
  */
 function Dashboard() {
   const {
-    documents, loading, error, successMessage,
-    loadDocuments, removeDocument, clearError, clearSuccess,
+    documents,
+    loading,
+    error,
+    successMessage,
+    loadDocuments,
+    removeDocument,
+    clearError,
+    clearSuccess,
     formLoading,
   } = useApp();
 
   const [statusFilter, setStatusFilter] = useState('');
-  const [showAddForm, setShowAddForm]   = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
 
   useEffect(() => {
     loadDocuments(statusFilter);
   }, [statusFilter, loadDocuments]);
 
-  // Auto-dismiss success banner after 4 s
+  // Auto-dismiss success notifications
   useEffect(() => {
     if (!successMessage) return;
-    const t = setTimeout(clearSuccess, 4000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(clearSuccess, 4500);
+    return () => clearTimeout(timer);
   }, [successMessage, clearSuccess]);
 
-  const STATUS_TABS = ['', 'Active', 'Expiring Soon', 'Expired'];
-
-  const tabStyle = (active) => ({
-    padding: '0.35rem 1rem',
-    border: '1px solid #ccc',
-    borderRadius: '20px',
-    background: active ? '#8B1A1A' : 'transparent',
-    color: active ? '#fff' : '#555',
-    cursor: 'pointer',
-    fontSize: '0.82rem',
-    fontWeight: active ? 600 : 400,
-  });
+  const STATUS_TABS = [
+    { label: 'All Documents', value: '' },
+    { label: 'Active', value: 'Active' },
+    { label: 'Expiring Soon', value: 'Expiring Soon' },
+    { label: 'Expired', value: 'Expired' },
+  ];
 
   return (
     <section>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-        <h2 style={{ margin: 0 }}>Prioritized Renewal Register</h2>
-        <button
-          onClick={() => setShowAddForm((v) => !v)}
-          style={{ padding: '0.5rem 1.25rem', background: '#8B1A1A', color: '#fff',
-                   border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 }}
-        >
-          {showAddForm ? '— Cancel' : '+ Add Document'}
-        </button>
+      {/* ── Header ──────────────────────────────────────────────── */}
+      <div className="view-header">
+        <div>
+          <span className="view-header__eyebrow">Executive Ledger</span>
+          <h1 className="view-header__title">Prioritized Renewal Register</h1>
+        </div>
+        <div className="view-header__actions">
+          <button
+            onClick={() => setShowAddForm((prev) => !prev)}
+            className={`btn ${showAddForm ? 'btn--ghost' : 'btn--primary'}`}
+          >
+            {showAddForm ? 'Close Entry Form' : '+ New Compliance Document'}
+          </button>
+        </div>
       </div>
 
+      {/* ── Inline Add Document Form Container ──────────────────── */}
       {showAddForm && (
-        <div style={{ background: '#fafafa', border: '1px solid #e0e0e0',
-                      borderRadius: '6px', padding: '1.5rem', marginBottom: '1.5rem' }}>
+        <div className="card--form">
           <DocumentForm
             mode="add"
             onCancel={() => setShowAddForm(false)}
@@ -70,83 +73,128 @@ function Dashboard() {
         </div>
       )}
 
-      {successMessage && <AlertBanner type="success" message={successMessage} onClose={clearSuccess} />}
-      {error          && <AlertBanner type="error"   message={error.message}  onClose={clearError}  />}
+      {/* ── Notifications ───────────────────────────────────────── */}
+      {successMessage && (
+        <AlertBanner type="success" message={successMessage} onClose={clearSuccess} />
+      )}
+      {error && (
+        <AlertBanner type="error" message={error.message} onClose={clearError} />
+      )}
 
-      {/* Status filter tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-        {STATUS_TABS.map((s) => (
-          <button key={s || 'all'} style={tabStyle(statusFilter === s)} onClick={() => setStatusFilter(s)}>
-            {s || 'All'}
-          </button>
-        ))}
+      {/* ── Filter Tabs ─────────────────────────────────────────── */}
+      <div className="filter-tabs" role="tablist" aria-label="Filter documents by status">
+        {STATUS_TABS.map((tab) => {
+          const isActive = statusFilter === tab.value;
+          return (
+            <button
+              key={tab.value || 'all'}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              className={`filter-tab ${isActive ? 'filter-tab--active' : ''}`}
+              onClick={() => setStatusFilter(tab.value)}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
+      {/* ── Table / Content ─────────────────────────────────────── */}
       {loading ? (
-        <LoadingSpinner message="Loading documents…" />
+        <LoadingSpinner message="Consulting document ledger…" />
       ) : documents.length === 0 ? (
-        <p style={{ color: '#888', padding: '2rem 0', textAlign: 'center' }}>
-          No documents found. Add one to get started.
-        </p>
-      ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-            <thead>
-              <tr style={{ background: '#f5f0e8', textAlign: 'left' }}>
-                <th style={th}>Title</th>
-                <th style={th}>Type</th>
-                <th style={th}>Owner</th>
-                <th style={th}>Expiry Date</th>
-                <th style={th}>Days Left</th>
-                <th style={th}>Status</th>
-                <th style={th}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {documents.map((doc) => {
-                const daysLeft = Math.ceil(
-                  (new Date(doc.expiryDate) - new Date()) / (1000 * 60 * 60 * 24)
-                );
-                return (
-                  <tr key={doc._id} style={{ borderBottom: '1px solid #eee' }}>
-                    <td style={td}>
-                      <Link to={`/documents/${doc._id}`} style={{ color: '#8B1A1A', textDecoration: 'none', fontWeight: 500 }}>
-                        {doc.title}
-                      </Link>
-                    </td>
-                    <td style={td}>{doc.documentType}</td>
-                    <td style={td}>{doc.owner}</td>
-                    <td style={td}>{new Date(doc.expiryDate).toLocaleDateString()}</td>
-                    <td style={{ ...td, fontWeight: 600, color: daysLeft < 0 ? '#b71c1c' : daysLeft <= 30 ? '#e65100' : '#2e7d32' }}>
-                      {daysLeft < 0 ? `${Math.abs(daysLeft)}d overdue` : `${daysLeft}d`}
-                    </td>
-                    <td style={td}><StatusBadge status={doc.status} /></td>
-                    <td style={td}>
-                      <Link to={`/documents/${doc._id}`}
-                            style={{ color: '#8B1A1A', marginRight: '0.75rem', fontSize: '0.82rem' }}>
-                        View
-                      </Link>
-                      <button
-                        onClick={() => { if (window.confirm(`Delete "${doc.title}"?`)) removeDocument(doc._id); }}
-                        disabled={formLoading}
-                        style={{ background: 'none', border: 'none', color: '#888',
-                                 cursor: 'pointer', fontSize: '0.82rem', padding: 0 }}
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="card table-empty">
+          <p>No compliance documents recorded under this classification.</p>
         </div>
+      ) : (
+        <>
+          <div className="table-scroll">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Document Title</th>
+                  <th>Classification</th>
+                  <th>Designated Owner</th>
+                  <th>Expiry Date</th>
+                  <th>Timeline</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {documents.map((doc) => {
+                  const daysLeft = Math.ceil(
+                    (new Date(doc.expiryDate) - new Date()) / (1000 * 60 * 60 * 24)
+                  );
+
+                  let daysChipClass = 'days-chip--ok';
+                  if (daysLeft < 0) {
+                    daysChipClass = 'days-chip--urgent';
+                  } else if (daysLeft <= 30) {
+                    daysChipClass = 'days-chip--warn';
+                  }
+
+                  return (
+                    <tr key={doc._id}>
+                      <td>
+                        <Link to={`/documents/${doc._id}`} className="td-title">
+                          {doc.title}
+                        </Link>
+                      </td>
+                      <td className="td-meta">{doc.documentType}</td>
+                      <td>{doc.owner}</td>
+                      <td className="td-num">
+                        {new Date(doc.expiryDate).toLocaleDateString('en-GB', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </td>
+                      <td>
+                        <span className={`days-chip ${daysChipClass}`}>
+                          {daysLeft < 0
+                            ? `${Math.abs(daysLeft)}d overdue`
+                            : `${daysLeft}d remaining`}
+                        </span>
+                      </td>
+                      <td>
+                        <StatusBadge status={doc.status} />
+                      </td>
+                      <td>
+                        <div className="td-actions" style={{ justifyContent: 'flex-end' }}>
+                          <Link to={`/documents/${doc._id}`} className="td-action-link">
+                            View / Renew
+                          </Link>
+                          <span className="td-divider">&bull;</span>
+                          <button
+                            type="button"
+                            className="btn--danger"
+                            onClick={() => {
+                              if (window.confirm(`Permanently remove "${doc.title}" and its renewal log?`)) {
+                                removeDocument(doc._id);
+                              }
+                            }}
+                            disabled={formLoading}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <p className="table-meta">
+            Displaying {documents.length} recorded item{documents.length !== 1 ? 's' : ''} &bull; Prioritized by nearest expiry date
+          </p>
+        </>
       )}
     </section>
   );
 }
-
-const th = { padding: '0.65rem 1rem', borderBottom: '2px solid #ddd', fontWeight: 600, whiteSpace: 'nowrap' };
-const td = { padding: '0.6rem 1rem', verticalAlign: 'middle' };
 
 export default Dashboard;

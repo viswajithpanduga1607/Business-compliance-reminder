@@ -1,14 +1,7 @@
 import React from 'react';
 
 /**
- * Class-based Error Boundary.
- * Catches render-time errors in any child subtree and renders a graceful
- * fallback instead of a blank screen.
- *
- * Usage:
- *   <ErrorBoundary fallback={<p>Something broke.</p>}>
- *     <MyComponent />
- *   </ErrorBoundary>
+ * Class-based Error Boundary — catches render-time errors in child subtrees.
  */
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -21,32 +14,28 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, info) {
-    // In production, swap this for a real logging service (Sentry, etc.)
-    console.error('[ErrorBoundary] Caught error:', error, info.componentStack);
+    console.error('[ErrorBoundary]', error, info.componentStack);
   }
 
-  handleReset = () => {
-    this.setState({ hasError: false, error: null });
-  };
+  handleReset = () => this.setState({ hasError: false, error: null });
 
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback;
-
       return (
-        <div role="alert" style={{ padding: '2rem', textAlign: 'center' }}>
-          <h2>Something went wrong.</h2>
-          <p style={{ color: '#888', marginBottom: '1rem' }}>
+        <div className="card" style={{ textAlign: 'center', margin: '3rem auto', maxWidth: 480 }}>
+          <h2 style={{ marginBottom: '0.75rem' }}>Something went wrong</h2>
+          <p style={{ color: 'var(--clr-ink-muted)', marginBottom: '1.5rem' }}>
             {this.state.error?.message || 'An unexpected render error occurred.'}
           </p>
-          <button onClick={this.handleReset}>Try Again</button>
+          <button className="btn btn--ghost" onClick={this.handleReset}>
+            Try Again
+          </button>
         </div>
       );
     }
-
     return this.props.children;
   }
 }
 
 export default ErrorBoundary;
-

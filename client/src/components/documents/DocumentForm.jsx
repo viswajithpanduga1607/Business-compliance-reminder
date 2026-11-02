@@ -6,17 +6,10 @@ const DOCUMENT_TYPES = [
   'Permit', 'Insurance Policy', 'Vendor Agreement',
   'License', 'Certification', 'Contract', 'Other',
 ];
-
 const STATUS_OPTIONS = ['Active', 'Expiring Soon', 'Expired'];
 
 /**
- * DocumentForm — handles both ADD and EDIT modes.
- *
- * Props:
- *   mode       : 'add' | 'edit'
- *   initial    : document object (edit mode only)
- *   onCancel   : () => void
- *   onSuccess  : () => void  (called after successful submit)
+ * DocumentForm — ADD (mode="add") or EDIT (mode="edit") a compliance document.
  */
 function DocumentForm({ mode = 'add', initial = null, onCancel, onSuccess }) {
   const { addDocument, editDocument, formLoading, formError, clearError } = useApp();
@@ -44,97 +37,115 @@ function DocumentForm({ mode = 'add', initial = null, onCancel, onSuccess }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFields((prev) => ({ ...prev, [name]: value }));
-    // Clear the field error on change
-    if (localErrors[name]) setLocalErrors((prev) => ({ ...prev, [name]: undefined }));
+    setFields((p) => ({ ...p, [name]: value }));
+    if (localErrors[name]) setLocalErrors((p) => ({ ...p, [name]: undefined }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length) { setLocalErrors(errs); return; }
-
-    const payload = {
-      ...fields,
-      expiryDate: new Date(fields.expiryDate).toISOString(),
-    };
-
-    if (mode === 'add') {
-      await addDocument(payload, onSuccess);
-    } else {
-      await editDocument(initial._id, payload, onSuccess);
-    }
+    const payload = { ...fields, expiryDate: new Date(fields.expiryDate).toISOString() };
+    if (mode === 'add') await addDocument(payload, onSuccess);
+    else                await editDocument(initial._id, payload, onSuccess);
   };
 
-  const fieldStyle = (name) => ({
-    width: '100%',
-    padding: '0.5rem 0.75rem',
-    border: `1px solid ${localErrors[name] ? '#e53935' : '#ccc'}`,
-    borderRadius: '4px',
-    fontSize: '0.9rem',
-    boxSizing: 'border-box',
-  });
-
-  const labelStyle = { display: 'block', marginBottom: '0.25rem', fontWeight: 500, fontSize: '0.85rem' };
-  const fieldWrap  = { marginBottom: '1rem' };
-  const errorTip   = { color: '#e53935', fontSize: '0.78rem', marginTop: '0.2rem' };
+  const inputCls = (name) =>
+    `form-group__input${localErrors[name] ? ' form-group__input--error' : ''}`;
+  const selectCls = (name) =>
+    `form-group__select${localErrors[name] ? ' form-group__select--error' : ''}`;
 
   return (
     <form onSubmit={handleSubmit} noValidate>
-      <h3 style={{ marginTop: 0 }}>{mode === 'add' ? 'Add New Document' : 'Edit Document'}</h3>
+      <h3 className="lux-form__title">
+        {mode === 'add' ? 'Register New Document' : 'Edit Document'}
+      </h3>
 
       {formError && (
         <AlertBanner type="error" message={formError.message} onClose={clearError} />
       )}
 
-      <div style={fieldWrap}>
-        <label style={labelStyle} htmlFor="title">Title *</label>
-        <input id="title" name="title" value={fields.title}
-               onChange={handleChange} style={fieldStyle('title')} placeholder="e.g. Fire Safety Permit" />
-        {localErrors.title && <p style={errorTip}>{localErrors.title}</p>}
+      <div className="form-grid">
+        {/* Title */}
+        <div className="form-group form-group--full">
+          <label className="form-group__label" htmlFor="title">
+            Document Title <span className="req">*</span>
+          </label>
+          <input
+            id="title" name="title" className={inputCls('title')}
+            value={fields.title} onChange={handleChange}
+            placeholder="e.g. Fire Safety Permit 2027"
+          />
+          {localErrors.title && <span className="form-group__error">⚠ {localErrors.title}</span>}
+        </div>
+
+        {/* Owner */}
+        <div className="form-group">
+          <label className="form-group__label" htmlFor="owner">
+            Document Owner <span className="req">*</span>
+          </label>
+          <input
+            id="owner" name="owner" className={inputCls('owner')}
+            value={fields.owner} onChange={handleChange}
+            placeholder="e.g. Administration Office"
+          />
+          {localErrors.owner && <span className="form-group__error">⚠ {localErrors.owner}</span>}
+        </div>
+
+        {/* Document Type */}
+        <div className="form-group">
+          <label className="form-group__label" htmlFor="documentType">
+            Document Type <span className="req">*</span>
+          </label>
+          <div className="select-wrap">
+            <select
+              id="documentType" name="documentType"
+              className={selectCls('documentType')}
+              value={fields.documentType} onChange={handleChange}
+            >
+              <option value="">— Select a type —</option>
+              {DOCUMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          {localErrors.documentType && <span className="form-group__error">⚠ {localErrors.documentType}</span>}
+        </div>
+
+        {/* Expiry Date */}
+        <div className="form-group">
+          <label className="form-group__label" htmlFor="expiryDate">
+            Expiry Date <span className="req">*</span>
+          </label>
+          <input
+            id="expiryDate" name="expiryDate" type="date"
+            className={inputCls('expiryDate')}
+            value={fields.expiryDate} onChange={handleChange}
+          />
+          {localErrors.expiryDate && <span className="form-group__error">⚠ {localErrors.expiryDate}</span>}
+        </div>
+
+        {/* Status */}
+        <div className="form-group">
+          <label className="form-group__label" htmlFor="status">Status</label>
+          <div className="select-wrap">
+            <select
+              id="status" name="status"
+              className="form-group__select"
+              value={fields.status} onChange={handleChange}
+            >
+              {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+        </div>
       </div>
 
-      <div style={fieldWrap}>
-        <label style={labelStyle} htmlFor="owner">Owner *</label>
-        <input id="owner" name="owner" value={fields.owner}
-               onChange={handleChange} style={fieldStyle('owner')} placeholder="e.g. Admin Office" />
-        {localErrors.owner && <p style={errorTip}>{localErrors.owner}</p>}
-      </div>
-
-      <div style={fieldWrap}>
-        <label style={labelStyle} htmlFor="documentType">Document Type *</label>
-        <select id="documentType" name="documentType" value={fields.documentType}
-                onChange={handleChange} style={fieldStyle('documentType')}>
-          <option value="">— Select type —</option>
-          {DOCUMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
-        {localErrors.documentType && <p style={errorTip}>{localErrors.documentType}</p>}
-      </div>
-
-      <div style={fieldWrap}>
-        <label style={labelStyle} htmlFor="expiryDate">Expiry Date *</label>
-        <input id="expiryDate" name="expiryDate" type="date"
-               value={fields.expiryDate} onChange={handleChange} style={fieldStyle('expiryDate')} />
-        {localErrors.expiryDate && <p style={errorTip}>{localErrors.expiryDate}</p>}
-      </div>
-
-      <div style={fieldWrap}>
-        <label style={labelStyle} htmlFor="status">Status</label>
-        <select id="status" name="status" value={fields.status}
-                onChange={handleChange} style={fieldStyle('status')}>
-          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
-      </div>
-
-      <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
-        <button type="button" onClick={onCancel} disabled={formLoading}
-                style={{ padding: '0.5rem 1.25rem', cursor: 'pointer' }}>
+      <div className="form-actions">
+        <button type="button" className="btn btn--ghost" onClick={onCancel} disabled={formLoading}>
           Cancel
         </button>
-        <button type="submit" disabled={formLoading}
-                style={{ padding: '0.5rem 1.25rem', background: '#8B1A1A',
-                         color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-          {formLoading ? 'Saving…' : mode === 'add' ? 'Add Document' : 'Save Changes'}
+        <button type="submit" className="btn btn--primary" disabled={formLoading}>
+          {formLoading
+            ? 'Saving…'
+            : mode === 'add' ? 'Register Document' : 'Save Changes'}
         </button>
       </div>
     </form>

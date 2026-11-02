@@ -7,18 +7,24 @@ import { StatusBadge } from '../components/layout/Navbar';
 import DocumentForm from '../components/documents/DocumentForm';
 
 /**
- * DocumentRegister — tabular view of every document in the system.
- * Each row links to DocumentDetail and exposes an inline edit trigger.
- * Documents are sorted by expiryDate ASC (closest first) — enforced by the API.
+ * DocumentRegister — Master ledger table of every registered document.
+ * Provides entry creation, inline editing, and direct history inspection.
  */
 function DocumentRegister() {
   const {
-    documents, loading, error, successMessage,
-    loadDocuments, removeDocument, clearError, clearSuccess, formLoading,
+    documents,
+    loading,
+    error,
+    successMessage,
+    loadDocuments,
+    removeDocument,
+    clearError,
+    clearSuccess,
+    formLoading,
   } = useApp();
 
-  const [showAddForm, setShowAddForm]   = useState(false);
-  const [editingDoc,  setEditingDoc]    = useState(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingDoc, setEditingDoc] = useState(null);
 
   useEffect(() => {
     loadDocuments();
@@ -26,26 +32,34 @@ function DocumentRegister() {
 
   useEffect(() => {
     if (!successMessage) return;
-    const t = setTimeout(clearSuccess, 4000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(clearSuccess, 4500);
+    return () => clearTimeout(timer);
   }, [successMessage, clearSuccess]);
 
   return (
     <section>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-        <h2 style={{ margin: 0 }}>Document Register</h2>
-        <button
-          onClick={() => { setShowAddForm((v) => !v); setEditingDoc(null); }}
-          style={{ padding: '0.5rem 1.25rem', background: '#8B1A1A', color: '#fff',
-                   border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 }}
-        >
-          {showAddForm ? '— Cancel' : '+ Add Document'}
-        </button>
+      {/* ── View Header ─────────────────────────────────────────── */}
+      <div className="view-header">
+        <div>
+          <span className="view-header__eyebrow">Inventory Ledger</span>
+          <h1 className="view-header__title">Compliance Document Register</h1>
+        </div>
+        <div className="view-header__actions">
+          <button
+            onClick={() => {
+              setShowAddForm((prev) => !prev);
+              setEditingDoc(null);
+            }}
+            className={`btn ${showAddForm ? 'btn--ghost' : 'btn--primary'}`}
+          >
+            {showAddForm ? 'Close Entry Form' : '+ Register Document'}
+          </button>
+        </div>
       </div>
 
-      {(showAddForm && !editingDoc) && (
-        <div style={{ background: '#fafafa', border: '1px solid #e0e0e0',
-                      borderRadius: '6px', padding: '1.5rem', marginBottom: '1.5rem' }}>
+      {/* ── Inline Add Form ─────────────────────────────────────── */}
+      {showAddForm && !editingDoc && (
+        <div className="card--form">
           <DocumentForm
             mode="add"
             onCancel={() => setShowAddForm(false)}
@@ -54,9 +68,9 @@ function DocumentRegister() {
         </div>
       )}
 
+      {/* ── Inline Edit Form ────────────────────────────────────── */}
       {editingDoc && (
-        <div style={{ background: '#fafafa', border: '1px solid #e0e0e0',
-                      borderRadius: '6px', padding: '1.5rem', marginBottom: '1.5rem' }}>
+        <div className="card--form">
           <DocumentForm
             mode="edit"
             initial={editingDoc}
@@ -66,79 +80,103 @@ function DocumentRegister() {
         </div>
       )}
 
-      {successMessage && <AlertBanner type="success" message={successMessage} onClose={clearSuccess} />}
-      {error          && <AlertBanner type="error"   message={error.message}  onClose={clearError}  />}
-
-      {loading ? (
-        <LoadingSpinner message="Loading register…" />
-      ) : documents.length === 0 ? (
-        <p style={{ color: '#888', padding: '2rem 0', textAlign: 'center' }}>
-          The register is empty. Add your first document above.
-        </p>
-      ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-            <thead>
-              <tr style={{ background: '#f5f0e8', textAlign: 'left' }}>
-                <th style={th}>#</th>
-                <th style={th}>Title</th>
-                <th style={th}>Type</th>
-                <th style={th}>Owner</th>
-                <th style={th}>Expiry Date</th>
-                <th style={th}>Status</th>
-                <th style={th}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {documents.map((doc, idx) => (
-                <tr key={doc._id} style={{ borderBottom: '1px solid #eee' }}>
-                  <td style={td}>{idx + 1}</td>
-                  <td style={td}>
-                    <Link to={`/documents/${doc._id}`}
-                          style={{ color: '#8B1A1A', textDecoration: 'none', fontWeight: 500 }}>
-                      {doc.title}
-                    </Link>
-                  </td>
-                  <td style={td}>{doc.documentType}</td>
-                  <td style={td}>{doc.owner}</td>
-                  <td style={td}>{new Date(doc.expiryDate).toLocaleDateString()}</td>
-                  <td style={td}><StatusBadge status={doc.status} /></td>
-                  <td style={td}>
-                    <button
-                      onClick={() => { setEditingDoc(doc); setShowAddForm(false); }}
-                      style={actionBtn}
-                    >
-                      Edit
-                    </button>
-                    <Link to={`/documents/${doc._id}/history`} style={{ ...actionLink, marginLeft: '0.75rem' }}>
-                      History
-                    </Link>
-                    <button
-                      onClick={() => { if (window.confirm(`Delete "${doc.title}"?`)) removeDocument(doc._id); }}
-                      disabled={formLoading}
-                      style={{ ...actionBtn, color: '#b71c1c', marginLeft: '0.75rem' }}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {/* ── Notifications ───────────────────────────────────────── */}
+      {successMessage && (
+        <AlertBanner type="success" message={successMessage} onClose={clearSuccess} />
+      )}
+      {error && (
+        <AlertBanner type="error" message={error.message} onClose={clearError} />
       )}
 
-      <p style={{ marginTop: '1rem', fontSize: '0.8rem', color: '#aaa' }}>
-        {documents.length} document{documents.length !== 1 ? 's' : ''} — sorted by nearest expiry date
-      </p>
+      {/* ── Table Content ───────────────────────────────────────── */}
+      {loading ? (
+        <LoadingSpinner message="Retrieving compliance register…" />
+      ) : documents.length === 0 ? (
+        <div className="card table-empty">
+          <p>The register is currently empty. Add your first compliance instrument above.</p>
+        </div>
+      ) : (
+        <>
+          <div className="table-scroll">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '40px' }}>#</th>
+                  <th>Document Title</th>
+                  <th>Type</th>
+                  <th>Owner</th>
+                  <th>Expiry Date</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {documents.map((doc, idx) => (
+                  <tr key={doc._id}>
+                    <td className="td-meta td-num">{idx + 1}</td>
+                    <td>
+                      <Link to={`/documents/${doc._id}`} className="td-title">
+                        {doc.title}
+                      </Link>
+                    </td>
+                    <td className="td-meta">{doc.documentType}</td>
+                    <td>{doc.owner}</td>
+                    <td className="td-num">
+                      {new Date(doc.expiryDate).toLocaleDateString('en-GB', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </td>
+                    <td>
+                      <StatusBadge status={doc.status} />
+                    </td>
+                    <td>
+                      <div className="td-actions" style={{ justifyContent: 'flex-end' }}>
+                        <button
+                          type="button"
+                          className="td-action-link"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                          onClick={() => {
+                            setEditingDoc(doc);
+                            setShowAddForm(false);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <span className="td-divider">&bull;</span>
+                        <Link to={`/documents/${doc._id}/history`} className="td-action-link">
+                          Audit Trail
+                        </Link>
+                        <span className="td-divider">&bull;</span>
+                        <button
+                          type="button"
+                          className="btn--danger"
+                          onClick={() => {
+                            if (window.confirm(`Permanently remove "${doc.title}"?`)) {
+                              removeDocument(doc._id);
+                            }
+                          }}
+                          disabled={formLoading}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <p className="table-meta">
+            Total of {documents.length} registered compliance instrument{documents.length !== 1 ? 's' : ''} &bull; Ranked by expiry schedule
+          </p>
+        </>
+      )}
     </section>
   );
 }
-
-const th = { padding: '0.65rem 1rem', borderBottom: '2px solid #ddd', fontWeight: 600, whiteSpace: 'nowrap' };
-const td = { padding: '0.6rem 1rem', verticalAlign: 'middle' };
-const actionBtn  = { background: 'none', border: 'none', cursor: 'pointer',
-                     color: '#555', fontSize: '0.82rem', padding: 0 };
-const actionLink = { color: '#8B1A1A', fontSize: '0.82rem', textDecoration: 'none' };
 
 export default DocumentRegister;
