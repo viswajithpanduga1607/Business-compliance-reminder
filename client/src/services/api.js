@@ -64,3 +64,4 @@ export const fetchRenewalHistory = (id) => api.get(`/documents/${id}/history`);
 export const fetchHealth = () => api.get('/health');
 
 export default api;
+
