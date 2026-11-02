@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import AlertBanner from '../components/common/AlertBanner';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { StatusBadge } from '../components/layout/Navbar';
 import DocumentForm from '../components/documents/DocumentForm';
+import ExecutiveStats from '../components/dashboard/ExecutiveStats';
 
 /**
- * Dashboard view — shows the Prioritized Renewal Register.
- * Ranked automatically closest to expiry date first.
+ * Dashboard view — Executive intelligence hub displaying KPI cards,
+ * instant search filtering, and the prioritized renewal register.
  */
 function Dashboard() {
   const {
@@ -24,47 +25,80 @@ function Dashboard() {
   } = useApp();
 
   const [statusFilter, setStatusFilter] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
 
   useEffect(() => {
-    loadDocuments(statusFilter);
-  }, [statusFilter, loadDocuments]);
+    loadDocuments();
+  }, [loadDocuments]);
 
-  // Auto-dismiss success notifications
+  // Auto-dismiss success notification
   useEffect(() => {
     if (!successMessage) return;
     const timer = setTimeout(clearSuccess, 4500);
     return () => clearTimeout(timer);
   }, [successMessage, clearSuccess]);
 
+  // Filtered documents by both tab status and search query
+  const filteredDocuments = useMemo(() => {
+    let list = [...documents];
+    if (statusFilter) {
+      list = list.filter((d) => d.status === statusFilter);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(
+        (d) =>
+          d.title.toLowerCase().includes(q) ||
+          d.owner.toLowerCase().includes(q) ||
+          d.documentType.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [documents, statusFilter, searchQuery]);
+
+  // Count documents per status for badges on the tabs
+  const statusCounts = useMemo(() => {
+    const counts = { all: documents.length, Active: 0, 'Expiring Soon': 0, Expired: 0 };
+    documents.forEach((d) => {
+      if (counts[d.status] !== undefined) {
+        counts[d.status]++;
+      }
+    });
+    return counts;
+  }, [documents]);
+
   const STATUS_TABS = [
-    { label: 'All Documents', value: '' },
-    { label: 'Active', value: 'Active' },
-    { label: 'Expiring Soon', value: 'Expiring Soon' },
-    { label: 'Expired', value: 'Expired' },
+    { label: 'All Instruments', value: '', count: statusCounts.all },
+    { label: 'Active', value: 'Active', count: statusCounts.Active },
+    { label: 'Expiring Soon', value: 'Expiring Soon', count: statusCounts['Expiring Soon'] },
+    { label: 'Expired', value: 'Expired', count: statusCounts.Expired },
   ];
 
   return (
     <section>
-      {/* ── Header ──────────────────────────────────────────────── */}
+      {/* ── View Header ─────────────────────────────────────────── */}
       <div className="view-header">
         <div>
-          <span className="view-header__eyebrow">Executive Ledger</span>
+          <span className="view-header__eyebrow">Executive Intelligence &amp; Registry</span>
           <h1 className="view-header__title">Prioritized Renewal Register</h1>
         </div>
         <div className="view-header__actions">
           <button
             onClick={() => setShowAddForm((prev) => !prev)}
-            className={`btn ${showAddForm ? 'btn--ghost' : 'btn--primary'}`}
+            className={`btn ${showAddForm ? 'btn--ghost' : 'btn--primary'} btn--glow`}
           >
-            {showAddForm ? 'Close Entry Form' : '+ New Compliance Document'}
+            {showAddForm ? '✕ Close Entry Form' : '+ New Compliance Document'}
           </button>
         </div>
       </div>
 
+      {/* ── Executive KPI Intelligence Cards ───────────────────── */}
+      <ExecutiveStats documents={documents} />
+
       {/* ── Inline Add Document Form Container ──────────────────── */}
       {showAddForm && (
-        <div className="card--form">
+        <div className="card--form form-reveal">
           <DocumentForm
             mode="add"
             onCancel={() => setShowAddForm(false)}
@@ -81,31 +115,61 @@ function Dashboard() {
         <AlertBanner type="error" message={error.message} onClose={clearError} />
       )}
 
-      {/* ── Filter Tabs ─────────────────────────────────────────── */}
-      <div className="filter-tabs" role="tablist" aria-label="Filter documents by status">
-        {STATUS_TABS.map((tab) => {
-          const isActive = statusFilter === tab.value;
-          return (
+      {/* ── Search & Filter Command Strip ───────────────────────── */}
+      <div className="toolbar-strip">
+        {/* Search input with vintage styling */}
+        <div className="search-bar">
+          <span className="search-bar__icon">🔍</span>
+          <input
+            type="text"
+            className="search-bar__input"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search instruments by title, owner, or permit type..."
+          />
+          {searchQuery && (
             <button
-              key={tab.value || 'all'}
               type="button"
-              role="tab"
-              aria-selected={isActive}
-              className={`filter-tab ${isActive ? 'filter-tab--active' : ''}`}
-              onClick={() => setStatusFilter(tab.value)}
+              className="search-bar__clear"
+              onClick={() => setSearchQuery('')}
+              title="Clear search query"
             >
-              {tab.label}
+              ✕
             </button>
-          );
-        })}
+          )}
+        </div>
+
+        {/* Status filter tabs */}
+        <div className="filter-tabs" role="tablist" aria-label="Filter documents by status">
+          {STATUS_TABS.map((tab) => {
+            const isActive = statusFilter === tab.value;
+            return (
+              <button
+                key={tab.value || 'all'}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                className={`filter-tab ${isActive ? 'filter-tab--active' : ''}`}
+                onClick={() => setStatusFilter(tab.value)}
+              >
+                <span>{tab.label}</span>
+                <span className="filter-tab__count">{tab.count}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* ── Table / Content ─────────────────────────────────────── */}
       {loading ? (
         <LoadingSpinner message="Consulting document ledger…" />
-      ) : documents.length === 0 ? (
+      ) : filteredDocuments.length === 0 ? (
         <div className="card table-empty">
-          <p>No compliance documents recorded under this classification.</p>
+          <p>
+            {searchQuery
+              ? `No compliance instruments match "${searchQuery}".`
+              : 'No compliance instruments recorded under this classification.'}
+          </p>
         </div>
       ) : (
         <>
@@ -113,17 +177,17 @@ function Dashboard() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Document Title</th>
+                  <th>Document Instrument</th>
                   <th>Classification</th>
                   <th>Designated Owner</th>
                   <th>Expiry Date</th>
-                  <th>Timeline</th>
+                  <th>Urgency Timeline</th>
                   <th>Status</th>
                   <th style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {documents.map((doc) => {
+                {filteredDocuments.map((doc) => {
                   const daysLeft = Math.ceil(
                     (new Date(doc.expiryDate) - new Date()) / (1000 * 60 * 60 * 24)
                   );
@@ -136,14 +200,16 @@ function Dashboard() {
                   }
 
                   return (
-                    <tr key={doc._id}>
+                    <tr key={doc._id} className="table-row-hover">
                       <td>
                         <Link to={`/documents/${doc._id}`} className="td-title">
                           {doc.title}
                         </Link>
                       </td>
-                      <td className="td-meta">{doc.documentType}</td>
-                      <td>{doc.owner}</td>
+                      <td className="td-meta">
+                        <span className="doc-type-pill">{doc.documentType}</span>
+                      </td>
+                      <td className="td-owner">{doc.owner}</td>
                       <td className="td-num">
                         {new Date(doc.expiryDate).toLocaleDateString('en-GB', {
                           day: 'numeric',
@@ -163,7 +229,7 @@ function Dashboard() {
                       </td>
                       <td>
                         <div className="td-actions" style={{ justifyContent: 'flex-end' }}>
-                          <Link to={`/documents/${doc._id}`} className="td-action-link">
+                          <Link to={`/documents/${doc._id}`} className="btn-action-primary">
                             View / Renew
                           </Link>
                           <span className="td-divider">&bull;</span>
@@ -171,7 +237,7 @@ function Dashboard() {
                             type="button"
                             className="btn--danger"
                             onClick={() => {
-                              if (window.confirm(`Permanently remove "${doc.title}" and its renewal log?`)) {
+                              if (window.confirm(`Permanently remove "${doc.title}" and its audit log?`)) {
                                 removeDocument(doc._id);
                               }
                             }}
@@ -189,7 +255,7 @@ function Dashboard() {
           </div>
 
           <p className="table-meta">
-            Displaying {documents.length} recorded item{documents.length !== 1 ? 's' : ''} &bull; Prioritized by nearest expiry date
+            Displaying {filteredDocuments.length} of {documents.length} instruments &bull; Prioritized strictly by nearest expiry date
           </p>
         </>
       )}

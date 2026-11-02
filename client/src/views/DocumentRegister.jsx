@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import AlertBanner from '../components/common/AlertBanner';
@@ -7,8 +7,8 @@ import { StatusBadge } from '../components/layout/Navbar';
 import DocumentForm from '../components/documents/DocumentForm';
 
 /**
- * DocumentRegister — Master ledger table of every registered document.
- * Provides entry creation, inline editing, and direct history inspection.
+ * DocumentRegister — Master catalog ledger of all corporate compliance records.
+ * Provides unified search, filtering, inline editing, and direct audit trail links.
  */
 function DocumentRegister() {
   const {
@@ -25,6 +25,7 @@ function DocumentRegister() {
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingDoc, setEditingDoc] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     loadDocuments();
@@ -36,12 +37,23 @@ function DocumentRegister() {
     return () => clearTimeout(timer);
   }, [successMessage, clearSuccess]);
 
+  const filteredDocs = useMemo(() => {
+    if (!searchQuery.trim()) return documents;
+    const q = searchQuery.toLowerCase();
+    return documents.filter(
+      (d) =>
+        d.title.toLowerCase().includes(q) ||
+        d.owner.toLowerCase().includes(q) ||
+        d.documentType.toLowerCase().includes(q)
+    );
+  }, [documents, searchQuery]);
+
   return (
     <section>
       {/* ── View Header ─────────────────────────────────────────── */}
       <div className="view-header">
         <div>
-          <span className="view-header__eyebrow">Inventory Ledger</span>
+          <span className="view-header__eyebrow">Inventory Catalog &amp; Master Register</span>
           <h1 className="view-header__title">Compliance Document Register</h1>
         </div>
         <div className="view-header__actions">
@@ -50,16 +62,16 @@ function DocumentRegister() {
               setShowAddForm((prev) => !prev);
               setEditingDoc(null);
             }}
-            className={`btn ${showAddForm ? 'btn--ghost' : 'btn--primary'}`}
+            className={`btn ${showAddForm ? 'btn--ghost' : 'btn--primary'} btn--glow`}
           >
-            {showAddForm ? 'Close Entry Form' : '+ Register Document'}
+            {showAddForm ? '✕ Close Entry Form' : '+ Register Document'}
           </button>
         </div>
       </div>
 
       {/* ── Inline Add Form ─────────────────────────────────────── */}
       {showAddForm && !editingDoc && (
-        <div className="card--form">
+        <div className="card--form form-reveal">
           <DocumentForm
             mode="add"
             onCancel={() => setShowAddForm(false)}
@@ -70,7 +82,7 @@ function DocumentRegister() {
 
       {/* ── Inline Edit Form ────────────────────────────────────── */}
       {editingDoc && (
-        <div className="card--form">
+        <div className="card--form form-reveal">
           <DocumentForm
             mode="edit"
             initial={editingDoc}
@@ -88,12 +100,39 @@ function DocumentRegister() {
         <AlertBanner type="error" message={error.message} onClose={clearError} />
       )}
 
+      {/* ── Search Toolbar ──────────────────────────────────────── */}
+      <div className="toolbar-strip">
+        <div className="search-bar" style={{ maxWidth: '480px' }}>
+          <span className="search-bar__icon">🔍</span>
+          <input
+            type="text"
+            className="search-bar__input"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search register by title, owner, or category..."
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              className="search-bar__clear"
+              onClick={() => setSearchQuery('')}
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* ── Table Content ───────────────────────────────────────── */}
       {loading ? (
         <LoadingSpinner message="Retrieving compliance register…" />
-      ) : documents.length === 0 ? (
+      ) : filteredDocs.length === 0 ? (
         <div className="card table-empty">
-          <p>The register is currently empty. Add your first compliance instrument above.</p>
+          <p>
+            {searchQuery
+              ? `No matching compliance instruments found for "${searchQuery}".`
+              : 'The register is currently empty. Add your first compliance instrument above.'}
+          </p>
         </div>
       ) : (
         <>
@@ -101,25 +140,27 @@ function DocumentRegister() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th style={{ width: '40px' }}>#</th>
+                  <th style={{ width: '44px' }}>#</th>
                   <th>Document Title</th>
-                  <th>Type</th>
-                  <th>Owner</th>
+                  <th>Classification</th>
+                  <th>Designated Owner</th>
                   <th>Expiry Date</th>
                   <th>Status</th>
                   <th style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {documents.map((doc, idx) => (
-                  <tr key={doc._id}>
+                {filteredDocs.map((doc, idx) => (
+                  <tr key={doc._id} className="table-row-hover">
                     <td className="td-meta td-num">{idx + 1}</td>
                     <td>
                       <Link to={`/documents/${doc._id}`} className="td-title">
                         {doc.title}
                       </Link>
                     </td>
-                    <td className="td-meta">{doc.documentType}</td>
+                    <td className="td-meta">
+                      <span className="doc-type-pill">{doc.documentType}</span>
+                    </td>
                     <td>{doc.owner}</td>
                     <td className="td-num">
                       {new Date(doc.expiryDate).toLocaleDateString('en-GB', {
@@ -135,8 +176,7 @@ function DocumentRegister() {
                       <div className="td-actions" style={{ justifyContent: 'flex-end' }}>
                         <button
                           type="button"
-                          className="td-action-link"
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                          className="btn-action-ghost"
                           onClick={() => {
                             setEditingDoc(doc);
                             setShowAddForm(false);
@@ -146,7 +186,7 @@ function DocumentRegister() {
                           Edit
                         </button>
                         <span className="td-divider">&bull;</span>
-                        <Link to={`/documents/${doc._id}/history`} className="td-action-link">
+                        <Link to={`/documents/${doc._id}/history`} className="btn-action-ghost">
                           Audit Trail
                         </Link>
                         <span className="td-divider">&bull;</span>
@@ -171,7 +211,7 @@ function DocumentRegister() {
           </div>
 
           <p className="table-meta">
-            Total of {documents.length} registered compliance instrument{documents.length !== 1 ? 's' : ''} &bull; Ranked by expiry schedule
+            Showing {filteredDocs.length} of {documents.length} recorded items &bull; Sequenced by compliance timeline
           </p>
         </>
       )}
